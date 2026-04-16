@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function App() {
   const [clientes, setClientes] = useState([]);
   const [pedidos, setPedidos] = useState([]);
+  const [ventas, setVentas] = useState([]);
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
@@ -16,6 +17,34 @@ export default function App() {
     dia: "Martes",
     cantidad: 2,
   });
+
+  const [nuevaVenta, setNuevaVenta] = useState({
+    cliente: "",
+    total: "",
+    metodo: "Efectivo",
+  });
+
+  useEffect(() => {
+    const clientesGuardados = localStorage.getItem("clientes");
+    const pedidosGuardados = localStorage.getItem("pedidos");
+    const ventasGuardadas = localStorage.getItem("ventas");
+
+    if (clientesGuardados) setClientes(JSON.parse(clientesGuardados));
+    if (pedidosGuardados) setPedidos(JSON.parse(pedidosGuardados));
+    if (ventasGuardadas) setVentas(JSON.parse(ventasGuardadas));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("clientes", JSON.stringify(clientes));
+  }, [clientes]);
+
+  useEffect(() => {
+    localStorage.setItem("pedidos", JSON.stringify(pedidos));
+  }, [pedidos]);
+
+  useEffect(() => {
+    localStorage.setItem("ventas", JSON.stringify(ventas));
+  }, [ventas]);
 
   const agregarCliente = () => {
     if (
@@ -39,13 +68,8 @@ export default function App() {
   };
 
   const agregarPedido = () => {
-    if (nuevoPedido.cliente === "") {
+    if (nuevoPedido.cliente.trim() === "") {
       alert("Selecciona un cliente");
-      return;
-    }
-
-    if (Number(nuevoPedido.cantidad) < 2) {
-      alert("El pedido mínimo es de 2 conos");
       return;
     }
 
@@ -55,6 +79,32 @@ export default function App() {
       cliente: "",
       dia: "Martes",
       cantidad: 2,
+    });
+  };
+
+  const guardarVenta = () => {
+    if (
+      nuevaVenta.cliente.trim() === "" ||
+      nuevaVenta.total.toString().trim() === ""
+    ) {
+      alert("Completa cliente y total de la venta");
+      return;
+    }
+
+    setVentas([
+      ...ventas,
+      {
+        cliente: nuevaVenta.cliente,
+        total: nuevaVenta.total,
+        metodo: nuevaVenta.metodo,
+        fecha: new Date().toLocaleString(),
+      },
+    ]);
+
+    setNuevaVenta({
+      cliente: "",
+      total: "",
+      metodo: "Efectivo",
     });
   };
 
@@ -154,6 +204,50 @@ export default function App() {
       </div>
 
       <div style={styles.card}>
+        <h2>Registrar venta</h2>
+
+        <select
+          style={styles.input}
+          value={nuevaVenta.cliente}
+          onChange={(e) =>
+            setNuevaVenta({ ...nuevaVenta, cliente: e.target.value })
+          }
+        >
+          <option value="">Selecciona un cliente</option>
+          {clientes.map((cliente, index) => (
+            <option key={index} value={cliente.nombre}>
+              {cliente.nombre}
+            </option>
+          ))}
+        </select>
+
+        <input
+          style={styles.input}
+          type="number"
+          placeholder="Total de la venta"
+          value={nuevaVenta.total}
+          onChange={(e) =>
+            setNuevaVenta({ ...nuevaVenta, total: e.target.value })
+          }
+        />
+
+        <select
+          style={styles.input}
+          value={nuevaVenta.metodo}
+          onChange={(e) =>
+            setNuevaVenta({ ...nuevaVenta, metodo: e.target.value })
+          }
+        >
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+
+        <button style={styles.blueButton} onClick={guardarVenta}>
+          Guardar venta
+        </button>
+      </div>
+
+      <div style={styles.card}>
         <h2>Clientes registrados</h2>
         {clientes.length === 0 ? (
           <p>No hay clientes todavía</p>
@@ -192,6 +286,30 @@ export default function App() {
               </p>
               <p>
                 <strong>Conos:</strong> {pedido.cantidad}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div style={styles.card}>
+        <h2>Ventas registradas</h2>
+        {ventas.length === 0 ? (
+          <p>No hay ventas todavía</p>
+        ) : (
+          ventas.map((venta, index) => (
+            <div key={index} style={styles.itemBox}>
+              <p>
+                <strong>Cliente:</strong> {venta.cliente}
+              </p>
+              <p>
+                <strong>Total:</strong> ${venta.total}
+              </p>
+              <p>
+                <strong>Método:</strong> {venta.metodo}
+              </p>
+              <p>
+                <strong>Fecha:</strong> {venta.fecha}
               </p>
             </div>
           ))
@@ -244,6 +362,14 @@ const styles = {
   },
   yellowButton: {
     backgroundColor: "#f9a825",
+    color: "white",
+    border: "none",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  blueButton: {
+    backgroundColor: "#1565c0",
     color: "white",
     border: "none",
     padding: "10px 14px",
