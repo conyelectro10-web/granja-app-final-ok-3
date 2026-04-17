@@ -4,6 +4,7 @@ export default function App() {
   const [clientes, setClientes] = useState([]);
   const [pedidos, setPedidos] = useState([]);
   const [ventas, setVentas] = useState([]);
+  const [gastos, setGastos] = useState([]);
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
@@ -24,9 +25,16 @@ export default function App() {
     metodo: "Efectivo",
   });
 
+  const [nuevoGasto, setNuevoGasto] = useState({
+    concepto: "Alimento",
+    monto: "",
+    metodo: "Efectivo",
+  });
+
   const [mostrarClientes, setMostrarClientes] = useState(false);
   const [mostrarPedidos, setMostrarPedidos] = useState(false);
   const [mostrarVentas, setMostrarVentas] = useState(false);
+  const [mostrarGastos, setMostrarGastos] = useState(false);
 
   const [buscarCliente, setBuscarCliente] = useState("");
   const [buscarPedido, setBuscarPedido] = useState("");
@@ -36,10 +44,12 @@ export default function App() {
     const clientesGuardados = localStorage.getItem("clientes");
     const pedidosGuardados = localStorage.getItem("pedidos");
     const ventasGuardadas = localStorage.getItem("ventas");
+    const gastosGuardados = localStorage.getItem("gastos");
 
     if (clientesGuardados) setClientes(JSON.parse(clientesGuardados));
     if (pedidosGuardados) setPedidos(JSON.parse(pedidosGuardados));
     if (ventasGuardadas) setVentas(JSON.parse(ventasGuardadas));
+    if (gastosGuardados) setGastos(JSON.parse(gastosGuardados));
   }, []);
 
   useEffect(() => {
@@ -53,6 +63,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("ventas", JSON.stringify(ventas));
   }, [ventas]);
+
+  useEffect(() => {
+    localStorage.setItem("gastos", JSON.stringify(gastos));
+  }, [gastos]);
 
   const agregarCliente = () => {
     if (
@@ -129,6 +143,33 @@ export default function App() {
     });
   };
 
+  const guardarGasto = () => {
+    if (
+      nuevoGasto.concepto.trim() === "" ||
+      nuevoGasto.monto.toString().trim() === ""
+    ) {
+      alert("Completa concepto y monto del gasto");
+      return;
+    }
+
+    setGastos([
+      ...gastos,
+      {
+        id: Date.now(),
+        concepto: nuevoGasto.concepto,
+        monto: Number(nuevoGasto.monto),
+        metodo: nuevoGasto.metodo,
+        fecha: new Date().toLocaleString(),
+      },
+    ]);
+
+    setNuevoGasto({
+      concepto: "Alimento",
+      monto: "",
+      metodo: "Efectivo",
+    });
+  };
+
   const eliminarCliente = (id) => {
     const confirmar = window.confirm("¿Seguro que deseas borrar este cliente?");
     if (!confirmar) return;
@@ -145,6 +186,12 @@ export default function App() {
     const confirmar = window.confirm("¿Seguro que deseas borrar esta venta?");
     if (!confirmar) return;
     setVentas(ventas.filter((venta) => venta.id !== id));
+  };
+
+  const eliminarGasto = (id) => {
+    const confirmar = window.confirm("¿Seguro que deseas borrar este gasto?");
+    if (!confirmar) return;
+    setGastos(gastos.filter((gasto) => gasto.id !== id));
   };
 
   const clientesFiltrados = useMemo(() => {
@@ -170,6 +217,14 @@ export default function App() {
     return ventas.reduce((acum, venta) => acum + Number(venta.total || 0), 0);
   }, [ventas]);
 
+  const totalGastos = useMemo(() => {
+    return gastos.reduce((acum, gasto) => acum + Number(gasto.monto || 0), 0);
+  }, [gastos]);
+
+  const utilidadNeta = useMemo(() => {
+    return ventaBruta - totalGastos;
+  }, [ventaBruta, totalGastos]);
+
   const totalConosFiltrados = useMemo(() => {
     return pedidosFiltrados.reduce(
       (acum, pedido) => acum + Number(pedido.cantidad || 0),
@@ -180,7 +235,22 @@ export default function App() {
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🐔 Granja La Lomita</h1>
-      <p style={styles.subtitle}>Pedidos, clientes y ventas</p>
+      <p style={styles.subtitle}>Pedidos, clientes, ventas y gastos</p>
+
+      <div style={styles.summaryGrid}>
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Venta bruta</div>
+          <div style={styles.summaryValue}>${ventaBruta}</div>
+        </div>
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Gastos</div>
+          <div style={styles.summaryValue}>${totalGastos}</div>
+        </div>
+        <div style={styles.summaryCard}>
+          <div style={styles.summaryLabel}>Utilidad neta</div>
+          <div style={styles.summaryValue}>${utilidadNeta}</div>
+        </div>
+      </div>
 
       <div style={styles.card}>
         <h2 style={styles.sectionTitle}>Agregar cliente</h2>
@@ -313,6 +383,58 @@ export default function App() {
 
         <button style={styles.blueButton} onClick={guardarVenta}>
           Guardar venta
+        </button>
+      </div>
+
+      <div style={styles.card}>
+        <h2 style={styles.sectionTitle}>Registrar gasto</h2>
+
+        <select
+          style={styles.input}
+          value={nuevoGasto.concepto}
+          onChange={(e) =>
+            setNuevoGasto({ ...nuevoGasto, concepto: e.target.value })
+          }
+        >
+          <option value="Alimento">Alimento</option>
+          <option value="Gasolina">Gasolina</option>
+          <option value="Nono">Nono</option>
+          <option value="Mamá">Mamá</option>
+          <option value="Papá">Papá</option>
+          <option value="Tío Mario">Tío Mario</option>
+          <option value="Etiquetas">Etiquetas</option>
+          <option value="Verduras">Verduras</option>
+          <option value="Vitafort">Vitafort</option>
+          <option value="Doceneras">Doceneras</option>
+          <option value="Paca de trigo">Paca de trigo</option>
+          <option value="Pastillas para perros">Pastillas para perros</option>
+          <option value="Propina">Propina</option>
+          <option value="Otro">Otro</option>
+        </select>
+
+        <input
+          style={styles.input}
+          type="number"
+          placeholder="Monto del gasto"
+          value={nuevoGasto.monto}
+          onChange={(e) =>
+            setNuevoGasto({ ...nuevoGasto, monto: e.target.value })
+          }
+        />
+
+        <select
+          style={styles.input}
+          value={nuevoGasto.metodo}
+          onChange={(e) =>
+            setNuevoGasto({ ...nuevoGasto, metodo: e.target.value })
+          }
+        >
+          <option value="Efectivo">Efectivo</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+
+        <button style={styles.redButton} onClick={guardarGasto}>
+          Guardar gasto
         </button>
       </div>
 
@@ -499,6 +621,60 @@ export default function App() {
           </>
         )}
       </div>
+
+      <div style={styles.card}>
+        <button
+          style={styles.folderButton}
+          onClick={() => setMostrarGastos(!mostrarGastos)}
+        >
+          <span>📁 Gastos registrados</span>
+          <span>{mostrarGastos ? "▲" : "▼"}</span>
+        </button>
+
+        {mostrarGastos && (
+          <>
+            <div style={styles.totalBoxRed}>
+              <strong>Gastos acumulados:</strong> ${totalGastos}
+            </div>
+
+            {gastos.length === 0 ? (
+              <p>No hay gastos todavía</p>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Concepto</th>
+                      <th style={styles.th}>Monto</th>
+                      <th style={styles.th}>Método</th>
+                      <th style={styles.th}>Fecha</th>
+                      <th style={styles.th}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gastos.map((gasto) => (
+                      <tr key={gasto.id}>
+                        <td style={styles.td}>{gasto.concepto}</td>
+                        <td style={styles.td}>${gasto.monto}</td>
+                        <td style={styles.td}>{gasto.metodo}</td>
+                        <td style={styles.td}>{gasto.fecha}</td>
+                        <td style={styles.td}>
+                          <button
+                            style={styles.deleteButton}
+                            onClick={() => eliminarGasto(gasto.id)}
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -521,6 +697,28 @@ const styles = {
     color: "#555",
     marginBottom: "20px",
     fontSize: "18px",
+  },
+  summaryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "14px",
+    marginBottom: "20px",
+  },
+  summaryCard: {
+    backgroundColor: "#ffffff",
+    padding: "18px",
+    borderRadius: "14px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+    textAlign: "center",
+  },
+  summaryLabel: {
+    color: "#666",
+    fontSize: "14px",
+    marginBottom: "8px",
+  },
+  summaryValue: {
+    fontSize: "28px",
+    fontWeight: "bold",
   },
   sectionTitle: {
     marginTop: 0,
@@ -584,6 +782,15 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
   },
+  redButton: {
+    backgroundColor: "#b71c1c",
+    color: "white",
+    border: "none",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
   deleteButton: {
     backgroundColor: "#c62828",
     color: "white",
@@ -622,6 +829,14 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "14px",
     fontSize: "16px",
+  },
+  totalBoxRed: {
+    backgroundColor: "#ffebee",
+    color: "#b71c1c",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    marginBottom: "14px",
+    fontSize: "18px",
   },
   tableWrapper: {
     overflowX: "auto",
