@@ -25,8 +25,12 @@ export default function App() {
   });
 
   const [mostrarClientes, setMostrarClientes] = useState(false);
+  const [mostrarPedidos, setMostrarPedidos] = useState(false);
   const [mostrarVentas, setMostrarVentas] = useState(false);
+
   const [buscarCliente, setBuscarCliente] = useState("");
+  const [buscarPedido, setBuscarPedido] = useState("");
+  const [filtroDiaPedidos, setFiltroDiaPedidos] = useState("Todos");
 
   useEffect(() => {
     const clientesGuardados = localStorage.getItem("clientes");
@@ -128,21 +132,18 @@ export default function App() {
   const eliminarCliente = (id) => {
     const confirmar = window.confirm("¿Seguro que deseas borrar este cliente?");
     if (!confirmar) return;
-
     setClientes(clientes.filter((cliente) => cliente.id !== id));
   };
 
   const eliminarPedido = (id) => {
     const confirmar = window.confirm("¿Seguro que deseas borrar este pedido?");
     if (!confirmar) return;
-
     setPedidos(pedidos.filter((pedido) => pedido.id !== id));
   };
 
   const eliminarVenta = (id) => {
     const confirmar = window.confirm("¿Seguro que deseas borrar esta venta?");
     if (!confirmar) return;
-
     setVentas(ventas.filter((venta) => venta.id !== id));
   };
 
@@ -152,9 +153,29 @@ export default function App() {
     );
   }, [clientes, buscarCliente]);
 
+  const pedidosFiltrados = useMemo(() => {
+    return pedidos.filter((pedido) => {
+      const coincideCliente = pedido.cliente
+        .toLowerCase()
+        .includes(buscarPedido.toLowerCase());
+
+      const coincideDia =
+        filtroDiaPedidos === "Todos" ? true : pedido.dia === filtroDiaPedidos;
+
+      return coincideCliente && coincideDia;
+    });
+  }, [pedidos, buscarPedido, filtroDiaPedidos]);
+
   const ventaBruta = useMemo(() => {
     return ventas.reduce((acum, venta) => acum + Number(venta.total || 0), 0);
   }, [ventas]);
+
+  const totalConosFiltrados = useMemo(() => {
+    return pedidosFiltrados.reduce(
+      (acum, pedido) => acum + Number(pedido.cantidad || 0),
+      0
+    );
+  }, [pedidosFiltrados]);
 
   return (
     <div style={styles.container}>
@@ -353,40 +374,75 @@ export default function App() {
       </div>
 
       <div style={styles.card}>
-        <h2 style={styles.sectionTitle}>Pedidos registrados</h2>
+        <button
+          style={styles.folderButton}
+          onClick={() => setMostrarPedidos(!mostrarPedidos)}
+        >
+          <span>📁 Pedidos registrados</span>
+          <span>{mostrarPedidos ? "▲" : "▼"}</span>
+        </button>
 
-        {pedidos.length === 0 ? (
-          <p>No hay pedidos todavía</p>
-        ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Cliente</th>
-                  <th style={styles.th}>Día</th>
-                  <th style={styles.th}>Conos</th>
-                  <th style={styles.th}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pedidos.map((pedido) => (
-                  <tr key={pedido.id}>
-                    <td style={styles.td}>{pedido.cliente}</td>
-                    <td style={styles.td}>{pedido.dia}</td>
-                    <td style={styles.td}>{pedido.cantidad}</td>
-                    <td style={styles.td}>
-                      <button
-                        style={styles.deleteButton}
-                        onClick={() => eliminarPedido(pedido.id)}
-                      >
-                        Borrar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {mostrarPedidos && (
+          <>
+            <div style={styles.filtersRow}>
+              <input
+                style={styles.inputHalf}
+                placeholder="Buscar pedido por cliente..."
+                value={buscarPedido}
+                onChange={(e) => setBuscarPedido(e.target.value)}
+              />
+
+              <select
+                style={styles.inputHalf}
+                value={filtroDiaPedidos}
+                onChange={(e) => setFiltroDiaPedidos(e.target.value)}
+              >
+                <option value="Todos">Todos los días</option>
+                <option value="Martes">Martes</option>
+                <option value="Jueves">Jueves</option>
+                <option value="Sábado">Sábado</option>
+              </select>
+            </div>
+
+            <div style={styles.totalBoxYellow}>
+              <strong>Total pedidos filtrados:</strong> {pedidosFiltrados.length}{" "}
+              | <strong>Total conos:</strong> {totalConosFiltrados}
+            </div>
+
+            {pedidosFiltrados.length === 0 ? (
+              <p>No hay pedidos para mostrar</p>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Cliente</th>
+                      <th style={styles.th}>Día</th>
+                      <th style={styles.th}>Conos</th>
+                      <th style={styles.th}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pedidosFiltrados.map((pedido) => (
+                      <tr key={pedido.id}>
+                        <td style={styles.td}>{pedido.cliente}</td>
+                        <td style={styles.td}>{pedido.dia}</td>
+                        <td style={styles.td}>{pedido.cantidad}</td>
+                        <td style={styles.td}>
+                          <button
+                            style={styles.deleteButton}
+                            onClick={() => eliminarPedido(pedido.id)}
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -487,6 +543,20 @@ const styles = {
     boxSizing: "border-box",
     fontSize: "15px",
   },
+  inputHalf: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    boxSizing: "border-box",
+    fontSize: "15px",
+  },
+  filtersRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px",
+    marginBottom: "14px",
+  },
   greenButton: {
     backgroundColor: "#2e7d32",
     color: "white",
@@ -544,6 +614,14 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "14px",
     fontSize: "18px",
+  },
+  totalBoxYellow: {
+    backgroundColor: "#fff8e1",
+    color: "#8d6e00",
+    padding: "12px 14px",
+    borderRadius: "8px",
+    marginBottom: "14px",
+    fontSize: "16px",
   },
   tableWrapper: {
     overflowX: "auto",
