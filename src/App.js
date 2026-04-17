@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function App() {
   const [clientes, setClientes] = useState([]);
@@ -23,6 +23,10 @@ export default function App() {
     total: "",
     metodo: "Efectivo",
   });
+
+  const [mostrarClientes, setMostrarClientes] = useState(false);
+  const [mostrarVentas, setMostrarVentas] = useState(false);
+  const [buscarCliente, setBuscarCliente] = useState("");
 
   useEffect(() => {
     const clientesGuardados = localStorage.getItem("clientes");
@@ -57,7 +61,13 @@ export default function App() {
       return;
     }
 
-    setClientes([...clientes, nuevoCliente]);
+    setClientes([
+      ...clientes,
+      {
+        id: Date.now(),
+        ...nuevoCliente,
+      },
+    ]);
 
     setNuevoCliente({
       nombre: "",
@@ -73,7 +83,13 @@ export default function App() {
       return;
     }
 
-    setPedidos([...pedidos, nuevoPedido]);
+    setPedidos([
+      ...pedidos,
+      {
+        id: Date.now(),
+        ...nuevoPedido,
+      },
+    ]);
 
     setNuevoPedido({
       cliente: "",
@@ -94,8 +110,9 @@ export default function App() {
     setVentas([
       ...ventas,
       {
+        id: Date.now(),
         cliente: nuevaVenta.cliente,
-        total: nuevaVenta.total,
+        total: Number(nuevaVenta.total),
         metodo: nuevaVenta.metodo,
         fecha: new Date().toLocaleString(),
       },
@@ -108,13 +125,44 @@ export default function App() {
     });
   };
 
+  const eliminarCliente = (id) => {
+    const confirmar = window.confirm("¿Seguro que deseas borrar este cliente?");
+    if (!confirmar) return;
+
+    setClientes(clientes.filter((cliente) => cliente.id !== id));
+  };
+
+  const eliminarPedido = (id) => {
+    const confirmar = window.confirm("¿Seguro que deseas borrar este pedido?");
+    if (!confirmar) return;
+
+    setPedidos(pedidos.filter((pedido) => pedido.id !== id));
+  };
+
+  const eliminarVenta = (id) => {
+    const confirmar = window.confirm("¿Seguro que deseas borrar esta venta?");
+    if (!confirmar) return;
+
+    setVentas(ventas.filter((venta) => venta.id !== id));
+  };
+
+  const clientesFiltrados = useMemo(() => {
+    return clientes.filter((cliente) =>
+      cliente.nombre.toLowerCase().includes(buscarCliente.toLowerCase())
+    );
+  }, [clientes, buscarCliente]);
+
+  const ventaBruta = useMemo(() => {
+    return ventas.reduce((acum, venta) => acum + Number(venta.total || 0), 0);
+  }, [ventas]);
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🐔 Granja La Lomita</h1>
-      <p style={styles.subtitle}>Pedidos y clientes</p>
+      <p style={styles.subtitle}>Pedidos, clientes y ventas</p>
 
       <div style={styles.card}>
-        <h2>Agregar cliente</h2>
+        <h2 style={styles.sectionTitle}>Agregar cliente</h2>
 
         <input
           style={styles.input}
@@ -158,7 +206,7 @@ export default function App() {
       </div>
 
       <div style={styles.card}>
-        <h2>Nuevo pedido</h2>
+        <h2 style={styles.sectionTitle}>Nuevo pedido</h2>
 
         <select
           style={styles.input}
@@ -168,8 +216,8 @@ export default function App() {
           }
         >
           <option value="">Selecciona un cliente</option>
-          {clientes.map((cliente, index) => (
-            <option key={index} value={cliente.nombre}>
+          {clientes.map((cliente) => (
+            <option key={cliente.id} value={cliente.nombre}>
               {cliente.nombre}
             </option>
           ))}
@@ -204,7 +252,7 @@ export default function App() {
       </div>
 
       <div style={styles.card}>
-        <h2>Registrar venta</h2>
+        <h2 style={styles.sectionTitle}>Registrar venta</h2>
 
         <select
           style={styles.input}
@@ -214,8 +262,8 @@ export default function App() {
           }
         >
           <option value="">Selecciona un cliente</option>
-          {clientes.map((cliente, index) => (
-            <option key={index} value={cliente.nombre}>
+          {clientes.map((cliente) => (
+            <option key={cliente.id} value={cliente.nombre}>
               {cliente.nombre}
             </option>
           ))}
@@ -248,71 +296,151 @@ export default function App() {
       </div>
 
       <div style={styles.card}>
-        <h2>Clientes registrados</h2>
-        {clientes.length === 0 ? (
-          <p>No hay clientes todavía</p>
-        ) : (
-          clientes.map((cliente, index) => (
-            <div key={index} style={styles.itemBox}>
-              <p>
-                <strong>Nombre:</strong> {cliente.nombre}
-              </p>
-              <p>
-                <strong>Teléfono:</strong> {cliente.telefono}
-              </p>
-              <p>
-                <strong>Dirección:</strong> {cliente.direccion}
-              </p>
-              <p>
-                <strong>Zona:</strong> {cliente.zona}
-              </p>
-            </div>
-          ))
+        <button
+          style={styles.folderButton}
+          onClick={() => setMostrarClientes(!mostrarClientes)}
+        >
+          <span>📁 Clientes registrados</span>
+          <span>{mostrarClientes ? "▲" : "▼"}</span>
+        </button>
+
+        {mostrarClientes && (
+          <>
+            <input
+              style={styles.input}
+              placeholder="Buscar cliente por nombre..."
+              value={buscarCliente}
+              onChange={(e) => setBuscarCliente(e.target.value)}
+            />
+
+            {clientesFiltrados.length === 0 ? (
+              <p>No hay clientes para mostrar</p>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Nombre</th>
+                      <th style={styles.th}>Teléfono</th>
+                      <th style={styles.th}>Dirección</th>
+                      <th style={styles.th}>Zona</th>
+                      <th style={styles.th}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clientesFiltrados.map((cliente) => (
+                      <tr key={cliente.id}>
+                        <td style={styles.td}>{cliente.nombre}</td>
+                        <td style={styles.td}>{cliente.telefono}</td>
+                        <td style={styles.td}>{cliente.direccion}</td>
+                        <td style={styles.td}>{cliente.zona}</td>
+                        <td style={styles.td}>
+                          <button
+                            style={styles.deleteButton}
+                            onClick={() => eliminarCliente(cliente.id)}
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
       <div style={styles.card}>
-        <h2>Pedidos</h2>
+        <h2 style={styles.sectionTitle}>Pedidos registrados</h2>
+
         {pedidos.length === 0 ? (
           <p>No hay pedidos todavía</p>
         ) : (
-          pedidos.map((pedido, index) => (
-            <div key={index} style={styles.itemBox}>
-              <p>
-                <strong>Cliente:</strong> {pedido.cliente}
-              </p>
-              <p>
-                <strong>Día:</strong> {pedido.dia}
-              </p>
-              <p>
-                <strong>Conos:</strong> {pedido.cantidad}
-              </p>
-            </div>
-          ))
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Cliente</th>
+                  <th style={styles.th}>Día</th>
+                  <th style={styles.th}>Conos</th>
+                  <th style={styles.th}>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pedidos.map((pedido) => (
+                  <tr key={pedido.id}>
+                    <td style={styles.td}>{pedido.cliente}</td>
+                    <td style={styles.td}>{pedido.dia}</td>
+                    <td style={styles.td}>{pedido.cantidad}</td>
+                    <td style={styles.td}>
+                      <button
+                        style={styles.deleteButton}
+                        onClick={() => eliminarPedido(pedido.id)}
+                      >
+                        Borrar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
       <div style={styles.card}>
-        <h2>Ventas registradas</h2>
-        {ventas.length === 0 ? (
-          <p>No hay ventas todavía</p>
-        ) : (
-          ventas.map((venta, index) => (
-            <div key={index} style={styles.itemBox}>
-              <p>
-                <strong>Cliente:</strong> {venta.cliente}
-              </p>
-              <p>
-                <strong>Total:</strong> ${venta.total}
-              </p>
-              <p>
-                <strong>Método:</strong> {venta.metodo}
-              </p>
-              <p>
-                <strong>Fecha:</strong> {venta.fecha}
-              </p>
+        <button
+          style={styles.folderButton}
+          onClick={() => setMostrarVentas(!mostrarVentas)}
+        >
+          <span>📁 Ventas registradas</span>
+          <span>{mostrarVentas ? "▲" : "▼"}</span>
+        </button>
+
+        {mostrarVentas && (
+          <>
+            <div style={styles.totalBox}>
+              <strong>Venta bruta acumulada:</strong> ${ventaBruta}
             </div>
-          ))
+
+            {ventas.length === 0 ? (
+              <p>No hay ventas todavía</p>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Cliente</th>
+                      <th style={styles.th}>Total</th>
+                      <th style={styles.th}>Método</th>
+                      <th style={styles.th}>Fecha</th>
+                      <th style={styles.th}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ventas.map((venta) => (
+                      <tr key={venta.id}>
+                        <td style={styles.td}>{venta.cliente}</td>
+                        <td style={styles.td}>${venta.total}</td>
+                        <td style={styles.td}>{venta.metodo}</td>
+                        <td style={styles.td}>{venta.fecha}</td>
+                        <td style={styles.td}>
+                          <button
+                            style={styles.deleteButton}
+                            onClick={() => eliminarVenta(venta.id)}
+                          >
+                            Borrar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -321,7 +449,7 @@ export default function App() {
 
 const styles = {
   container: {
-    maxWidth: "700px",
+    maxWidth: "950px",
     margin: "0 auto",
     padding: "20px",
     fontFamily: "Arial, sans-serif",
@@ -330,57 +458,112 @@ const styles = {
   title: {
     textAlign: "center",
     marginBottom: "5px",
+    fontSize: "42px",
   },
   subtitle: {
     textAlign: "center",
     color: "#555",
     marginBottom: "20px",
+    fontSize: "18px",
+  },
+  sectionTitle: {
+    marginTop: 0,
+    marginBottom: "16px",
   },
   card: {
     backgroundColor: "#fff",
     padding: "20px",
     marginBottom: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    borderRadius: "14px",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
   },
   input: {
     display: "block",
     width: "100%",
-    marginBottom: "10px",
-    padding: "10px",
+    marginBottom: "12px",
+    padding: "12px",
     borderRadius: "8px",
     border: "1px solid #ccc",
     boxSizing: "border-box",
+    fontSize: "15px",
   },
   greenButton: {
     backgroundColor: "#2e7d32",
     color: "white",
     border: "none",
-    padding: "10px 14px",
+    padding: "12px 16px",
     borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "bold",
   },
   yellowButton: {
     backgroundColor: "#f9a825",
     color: "white",
     border: "none",
-    padding: "10px 14px",
+    padding: "12px 16px",
     borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "bold",
   },
   blueButton: {
     backgroundColor: "#1565c0",
     color: "white",
     border: "none",
-    padding: "10px 14px",
+    padding: "12px 16px",
     borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "bold",
   },
-  itemBox: {
-    border: "1px solid #ddd",
-    padding: "10px",
+  deleteButton: {
+    backgroundColor: "#c62828",
+    color: "white",
+    border: "none",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  folderButton: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    border: "1px solid #dbe3ea",
+    padding: "14px 16px",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: "bold",
+    fontSize: "18px",
+    marginBottom: "12px",
+  },
+  totalBox: {
+    backgroundColor: "#e8f5e9",
+    color: "#1b5e20",
+    padding: "12px 14px",
     borderRadius: "8px",
-    marginBottom: "10px",
-    backgroundColor: "#fafafa",
+    marginBottom: "14px",
+    fontSize: "18px",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    backgroundColor: "#fff",
+  },
+  th: {
+    textAlign: "left",
+    padding: "12px",
+    backgroundColor: "#f3f4f6",
+    borderBottom: "2px solid #ddd",
+    fontSize: "14px",
+  },
+  td: {
+    padding: "12px",
+    borderBottom: "1px solid #eee",
+    fontSize: "14px",
+    verticalAlign: "top",
   },
 };
