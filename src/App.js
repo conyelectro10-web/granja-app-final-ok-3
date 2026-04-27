@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 export default function App() {
   const [clientes, setClientes] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [gastos, setGastos] = useState([]);
   const [cortes, setCortes] = useState([]);
@@ -12,12 +11,6 @@ export default function App() {
     telefono: "",
     direccion: "",
     zona: "",
-  });
-
-  const [nuevoPedido, setNuevoPedido] = useState({
-    cliente: "",
-    dia: "Martes",
-    cantidad: 2,
   });
 
   const [nuevaVenta, setNuevaVenta] = useState({
@@ -33,24 +26,19 @@ export default function App() {
   });
 
   const [mostrarClientes, setMostrarClientes] = useState(false);
-  const [mostrarPedidos, setMostrarPedidos] = useState(false);
   const [mostrarVentas, setMostrarVentas] = useState(false);
   const [mostrarGastos, setMostrarGastos] = useState(false);
   const [mostrarCortes, setMostrarCortes] = useState(false);
 
   const [buscarCliente, setBuscarCliente] = useState("");
-  const [buscarPedido, setBuscarPedido] = useState("");
-  const [filtroDiaPedidos, setFiltroDiaPedidos] = useState("Todos");
 
   useEffect(() => {
     const clientesGuardados = localStorage.getItem("clientes");
-    const pedidosGuardados = localStorage.getItem("pedidos");
     const ventasGuardadas = localStorage.getItem("ventas");
     const gastosGuardados = localStorage.getItem("gastos");
     const cortesGuardados = localStorage.getItem("cortes");
 
     if (clientesGuardados) setClientes(JSON.parse(clientesGuardados));
-    if (pedidosGuardados) setPedidos(JSON.parse(pedidosGuardados));
     if (ventasGuardadas) setVentas(JSON.parse(ventasGuardadas));
     if (gastosGuardados) setGastos(JSON.parse(gastosGuardados));
     if (cortesGuardados) setCortes(JSON.parse(cortesGuardados));
@@ -59,10 +47,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("clientes", JSON.stringify(clientes));
   }, [clientes]);
-
-  useEffect(() => {
-    localStorage.setItem("pedidos", JSON.stringify(pedidos));
-  }, [pedidos]);
 
   useEffect(() => {
     localStorage.setItem("ventas", JSON.stringify(ventas));
@@ -106,27 +90,6 @@ export default function App() {
       telefono: "",
       direccion: "",
       zona: "",
-    });
-  };
-
-  const agregarPedido = () => {
-    if (nuevoPedido.cliente.trim() === "") {
-      alert("Selecciona un cliente");
-      return;
-    }
-
-    setPedidos([
-      ...pedidos,
-      {
-        id: Date.now(),
-        ...nuevoPedido,
-      },
-    ]);
-
-    setNuevoPedido({
-      cliente: "",
-      dia: "Martes",
-      cantidad: 2,
     });
   };
 
@@ -189,11 +152,6 @@ export default function App() {
     setClientes(clientes.filter((cliente) => cliente.id !== id));
   };
 
-  const eliminarPedido = (id) => {
-    if (!window.confirm("¿Seguro que deseas borrar este pedido?")) return;
-    setPedidos(pedidos.filter((pedido) => pedido.id !== id));
-  };
-
   const eliminarVenta = (id) => {
     if (!window.confirm("¿Seguro que deseas borrar esta venta?")) return;
     setVentas(ventas.filter((venta) => venta.id !== id));
@@ -228,7 +186,7 @@ export default function App() {
     }
 
     const confirmar = window.confirm(
-      "¿Cerrar corte semanal? Las ventas y gastos actuales se irán al historial y la semana nueva empezará en cero."
+      "¿Cerrar corte semanal? Las ventas y gastos actuales se irán al historial y la semana nueva empezará desde cero."
     );
 
     if (!confirmar) return;
@@ -236,11 +194,11 @@ export default function App() {
     const nuevoCorte = {
       id: Date.now(),
       fecha: new Date().toLocaleString(),
-      ventas: ventas,
-      gastos: gastos,
-      ventaBruta: ventaBruta,
-      totalGastos: totalGastos,
-      utilidadNeta: utilidadNeta,
+      ventas,
+      gastos,
+      ventaBruta,
+      totalGastos,
+      utilidadNeta,
     };
 
     setCortes([nuevoCorte, ...cortes]);
@@ -254,30 +212,10 @@ export default function App() {
     );
   }, [clientesOrdenados, buscarCliente]);
 
-  const pedidosFiltrados = useMemo(() => {
-    return pedidos.filter((pedido) => {
-      const coincideCliente = pedido.cliente
-        .toLowerCase()
-        .includes(buscarPedido.toLowerCase());
-
-      const coincideDia =
-        filtroDiaPedidos === "Todos" ? true : pedido.dia === filtroDiaPedidos;
-
-      return coincideCliente && coincideDia;
-    });
-  }, [pedidos, buscarPedido, filtroDiaPedidos]);
-
-  const totalConosFiltrados = useMemo(() => {
-    return pedidosFiltrados.reduce(
-      (acum, pedido) => acum + Number(pedido.cantidad || 0),
-      0
-    );
-  }, [pedidosFiltrados]);
-
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🐔 Granja La Lomita</h1>
-      <p style={styles.subtitle}>Sistema semanal de clientes, pedidos, ventas y gastos</p>
+      <p style={styles.subtitle}>Sistema semanal de clientes, ventas y gastos</p>
 
       <div style={styles.summaryGrid}>
         <div style={styles.summaryCard}>
@@ -346,52 +284,6 @@ export default function App() {
 
         <button style={styles.greenButton} onClick={agregarCliente}>
           Guardar cliente
-        </button>
-      </div>
-
-      <div style={styles.card}>
-        <h2 style={styles.sectionTitle}>Nuevo pedido</h2>
-
-        <select
-          style={styles.input}
-          value={nuevoPedido.cliente}
-          onChange={(e) =>
-            setNuevoPedido({ ...nuevoPedido, cliente: e.target.value })
-          }
-        >
-          <option value="">Selecciona un cliente</option>
-          {clientesOrdenados.map((cliente) => (
-            <option key={cliente.id} value={cliente.nombre}>
-              {cliente.nombre}
-            </option>
-          ))}
-        </select>
-
-        <select
-          style={styles.input}
-          value={nuevoPedido.dia}
-          onChange={(e) =>
-            setNuevoPedido({ ...nuevoPedido, dia: e.target.value })
-          }
-        >
-          <option value="Martes">Martes</option>
-          <option value="Jueves">Jueves</option>
-          <option value="Sábado">Sábado</option>
-        </select>
-
-        <input
-          style={styles.input}
-          type="number"
-          min="2"
-          placeholder="Cantidad de conos"
-          value={nuevoPedido.cantidad}
-          onChange={(e) =>
-            setNuevoPedido({ ...nuevoPedido, cantidad: e.target.value })
-          }
-        />
-
-        <button style={styles.yellowButton} onClick={agregarPedido}>
-          Agregar pedido
         </button>
       </div>
 
@@ -534,79 +426,6 @@ export default function App() {
                           <button
                             style={styles.deleteButton}
                             onClick={() => eliminarCliente(cliente.id)}
-                          >
-                            Borrar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <div style={styles.card}>
-        <button
-          style={styles.folderButton}
-          onClick={() => setMostrarPedidos(!mostrarPedidos)}
-        >
-          <span>📁 Pedidos registrados</span>
-          <span>{mostrarPedidos ? "▲" : "▼"}</span>
-        </button>
-
-        {mostrarPedidos && (
-          <>
-            <div style={styles.filtersRow}>
-              <input
-                style={styles.inputHalf}
-                placeholder="Buscar pedido por cliente..."
-                value={buscarPedido}
-                onChange={(e) => setBuscarPedido(e.target.value)}
-              />
-
-              <select
-                style={styles.inputHalf}
-                value={filtroDiaPedidos}
-                onChange={(e) => setFiltroDiaPedidos(e.target.value)}
-              >
-                <option value="Todos">Todos los días</option>
-                <option value="Martes">Martes</option>
-                <option value="Jueves">Jueves</option>
-                <option value="Sábado">Sábado</option>
-              </select>
-            </div>
-
-            <div style={styles.totalBoxYellow}>
-              <strong>Total pedidos filtrados:</strong> {pedidosFiltrados.length}{" "}
-              | <strong>Total conos:</strong> {totalConosFiltrados}
-            </div>
-
-            {pedidosFiltrados.length === 0 ? (
-              <p>No hay pedidos para mostrar</p>
-            ) : (
-              <div style={styles.tableWrapper}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Cliente</th>
-                      <th style={styles.th}>Día</th>
-                      <th style={styles.th}>Conos</th>
-                      <th style={styles.th}>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pedidosFiltrados.map((pedido) => (
-                      <tr key={pedido.id}>
-                        <td style={styles.td}>{pedido.cliente}</td>
-                        <td style={styles.td}>{pedido.dia}</td>
-                        <td style={styles.td}>{pedido.cantidad}</td>
-                        <td style={styles.td}>
-                          <button
-                            style={styles.deleteButton}
-                            onClick={() => eliminarPedido(pedido.id)}
                           >
                             Borrar
                           </button>
@@ -833,31 +652,8 @@ const styles = {
     boxSizing: "border-box",
     fontSize: "15px",
   },
-  inputHalf: {
-    width: "100%",
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    boxSizing: "border-box",
-    fontSize: "15px",
-  },
-  filtersRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-    marginBottom: "14px",
-  },
   greenButton: {
     backgroundColor: "#2e7d32",
-    color: "white",
-    border: "none",
-    padding: "12px 16px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "bold",
-  },
-  yellowButton: {
-    backgroundColor: "#f9a825",
     color: "white",
     border: "none",
     padding: "12px 16px",
@@ -922,14 +718,6 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "14px",
     fontSize: "18px",
-  },
-  totalBoxYellow: {
-    backgroundColor: "#fff8e1",
-    color: "#8d6e00",
-    padding: "12px 14px",
-    borderRadius: "8px",
-    marginBottom: "14px",
-    fontSize: "16px",
   },
   totalBoxRed: {
     backgroundColor: "#ffebee",
