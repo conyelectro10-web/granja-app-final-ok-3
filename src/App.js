@@ -5,6 +5,7 @@ export default function App() {
   const [pedidos, setPedidos] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [cortes, setCortes] = useState([]);
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
@@ -35,6 +36,7 @@ export default function App() {
   const [mostrarPedidos, setMostrarPedidos] = useState(false);
   const [mostrarVentas, setMostrarVentas] = useState(false);
   const [mostrarGastos, setMostrarGastos] = useState(false);
+  const [mostrarCortes, setMostrarCortes] = useState(false);
 
   const [buscarCliente, setBuscarCliente] = useState("");
   const [buscarPedido, setBuscarPedido] = useState("");
@@ -45,11 +47,13 @@ export default function App() {
     const pedidosGuardados = localStorage.getItem("pedidos");
     const ventasGuardadas = localStorage.getItem("ventas");
     const gastosGuardados = localStorage.getItem("gastos");
+    const cortesGuardados = localStorage.getItem("cortes");
 
     if (clientesGuardados) setClientes(JSON.parse(clientesGuardados));
     if (pedidosGuardados) setPedidos(JSON.parse(pedidosGuardados));
     if (ventasGuardadas) setVentas(JSON.parse(ventasGuardadas));
     if (gastosGuardados) setGastos(JSON.parse(gastosGuardados));
+    if (cortesGuardados) setCortes(JSON.parse(cortesGuardados));
   }, []);
 
   useEffect(() => {
@@ -67,6 +71,16 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("gastos", JSON.stringify(gastos));
   }, [gastos]);
+
+  useEffect(() => {
+    localStorage.setItem("cortes", JSON.stringify(cortes));
+  }, [cortes]);
+
+  const clientesOrdenados = useMemo(() => {
+    return [...clientes].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
+    );
+  }, [clientes]);
 
   const agregarCliente = () => {
     if (
@@ -171,34 +185,74 @@ export default function App() {
   };
 
   const eliminarCliente = (id) => {
-    const confirmar = window.confirm("¿Seguro que deseas borrar este cliente?");
-    if (!confirmar) return;
+    if (!window.confirm("¿Seguro que deseas borrar este cliente?")) return;
     setClientes(clientes.filter((cliente) => cliente.id !== id));
   };
 
   const eliminarPedido = (id) => {
-    const confirmar = window.confirm("¿Seguro que deseas borrar este pedido?");
-    if (!confirmar) return;
+    if (!window.confirm("¿Seguro que deseas borrar este pedido?")) return;
     setPedidos(pedidos.filter((pedido) => pedido.id !== id));
   };
 
   const eliminarVenta = (id) => {
-    const confirmar = window.confirm("¿Seguro que deseas borrar esta venta?");
-    if (!confirmar) return;
+    if (!window.confirm("¿Seguro que deseas borrar esta venta?")) return;
     setVentas(ventas.filter((venta) => venta.id !== id));
   };
 
   const eliminarGasto = (id) => {
-    const confirmar = window.confirm("¿Seguro que deseas borrar este gasto?");
-    if (!confirmar) return;
+    if (!window.confirm("¿Seguro que deseas borrar este gasto?")) return;
     setGastos(gastos.filter((gasto) => gasto.id !== id));
   };
 
+  const eliminarCorte = (id) => {
+    if (!window.confirm("¿Seguro que deseas borrar este corte histórico?")) return;
+    setCortes(cortes.filter((corte) => corte.id !== id));
+  };
+
+  const ventaBruta = useMemo(() => {
+    return ventas.reduce((acum, venta) => acum + Number(venta.total || 0), 0);
+  }, [ventas]);
+
+  const totalGastos = useMemo(() => {
+    return gastos.reduce((acum, gasto) => acum + Number(gasto.monto || 0), 0);
+  }, [gastos]);
+
+  const utilidadNeta = useMemo(() => {
+    return ventaBruta - totalGastos;
+  }, [ventaBruta, totalGastos]);
+
+  const cerrarCorteSemanal = () => {
+    if (ventas.length === 0 && gastos.length === 0) {
+      alert("No hay ventas ni gastos para cerrar corte");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      "¿Cerrar corte semanal? Las ventas y gastos actuales se irán al historial y la semana nueva empezará en cero."
+    );
+
+    if (!confirmar) return;
+
+    const nuevoCorte = {
+      id: Date.now(),
+      fecha: new Date().toLocaleString(),
+      ventas: ventas,
+      gastos: gastos,
+      ventaBruta: ventaBruta,
+      totalGastos: totalGastos,
+      utilidadNeta: utilidadNeta,
+    };
+
+    setCortes([nuevoCorte, ...cortes]);
+    setVentas([]);
+    setGastos([]);
+  };
+
   const clientesFiltrados = useMemo(() => {
-    return clientes.filter((cliente) =>
+    return clientesOrdenados.filter((cliente) =>
       cliente.nombre.toLowerCase().includes(buscarCliente.toLowerCase())
     );
-  }, [clientes, buscarCliente]);
+  }, [clientesOrdenados, buscarCliente]);
 
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter((pedido) => {
@@ -213,18 +267,6 @@ export default function App() {
     });
   }, [pedidos, buscarPedido, filtroDiaPedidos]);
 
-  const ventaBruta = useMemo(() => {
-    return ventas.reduce((acum, venta) => acum + Number(venta.total || 0), 0);
-  }, [ventas]);
-
-  const totalGastos = useMemo(() => {
-    return gastos.reduce((acum, gasto) => acum + Number(gasto.monto || 0), 0);
-  }, [gastos]);
-
-  const utilidadNeta = useMemo(() => {
-    return ventaBruta - totalGastos;
-  }, [ventaBruta, totalGastos]);
-
   const totalConosFiltrados = useMemo(() => {
     return pedidosFiltrados.reduce(
       (acum, pedido) => acum + Number(pedido.cantidad || 0),
@@ -235,21 +277,32 @@ export default function App() {
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🐔 Granja La Lomita</h1>
-      <p style={styles.subtitle}>Pedidos, clientes, ventas y gastos</p>
+      <p style={styles.subtitle}>Sistema semanal de clientes, pedidos, ventas y gastos</p>
 
       <div style={styles.summaryGrid}>
         <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Venta bruta</div>
+          <div style={styles.summaryLabel}>Venta bruta semana actual</div>
           <div style={styles.summaryValue}>${ventaBruta}</div>
         </div>
         <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Gastos</div>
+          <div style={styles.summaryLabel}>Gastos semana actual</div>
           <div style={styles.summaryValue}>${totalGastos}</div>
         </div>
         <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Utilidad neta</div>
+          <div style={styles.summaryLabel}>Utilidad neta semana actual</div>
           <div style={styles.summaryValue}>${utilidadNeta}</div>
         </div>
+      </div>
+
+      <div style={styles.card}>
+        <h2 style={styles.sectionTitle}>Cerrar corte semanal</h2>
+        <p style={styles.note}>
+          Al cerrar el corte, las ventas y gastos actuales se guardan en historial
+          y la semana nueva empieza desde cero.
+        </p>
+        <button style={styles.blackButton} onClick={cerrarCorteSemanal}>
+          Cerrar corte semanal
+        </button>
       </div>
 
       <div style={styles.card}>
@@ -307,7 +360,7 @@ export default function App() {
           }
         >
           <option value="">Selecciona un cliente</option>
-          {clientes.map((cliente) => (
+          {clientesOrdenados.map((cliente) => (
             <option key={cliente.id} value={cliente.nombre}>
               {cliente.nombre}
             </option>
@@ -353,7 +406,7 @@ export default function App() {
           }
         >
           <option value="">Selecciona un cliente</option>
-          {clientes.map((cliente) => (
+          {clientesOrdenados.map((cliente) => (
             <option key={cliente.id} value={cliente.nombre}>
               {cliente.nombre}
             </option>
@@ -573,14 +626,14 @@ export default function App() {
           style={styles.folderButton}
           onClick={() => setMostrarVentas(!mostrarVentas)}
         >
-          <span>📁 Ventas registradas</span>
+          <span>📁 Ventas semana actual</span>
           <span>{mostrarVentas ? "▲" : "▼"}</span>
         </button>
 
         {mostrarVentas && (
           <>
             <div style={styles.totalBox}>
-              <strong>Venta bruta acumulada:</strong> ${ventaBruta}
+              <strong>Venta bruta semana actual:</strong> ${ventaBruta}
             </div>
 
             {ventas.length === 0 ? (
@@ -627,14 +680,14 @@ export default function App() {
           style={styles.folderButton}
           onClick={() => setMostrarGastos(!mostrarGastos)}
         >
-          <span>📁 Gastos registrados</span>
+          <span>📁 Gastos semana actual</span>
           <span>{mostrarGastos ? "▲" : "▼"}</span>
         </button>
 
         {mostrarGastos && (
           <>
             <div style={styles.totalBoxRed}>
-              <strong>Gastos acumulados:</strong> ${totalGastos}
+              <strong>Gastos semana actual:</strong> ${totalGastos}
             </div>
 
             {gastos.length === 0 ? (
@@ -671,6 +724,41 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <div style={styles.card}>
+        <button
+          style={styles.folderButton}
+          onClick={() => setMostrarCortes(!mostrarCortes)}
+        >
+          <span>📁 Historial de cortes anteriores</span>
+          <span>{mostrarCortes ? "▲" : "▼"}</span>
+        </button>
+
+        {mostrarCortes && (
+          <>
+            {cortes.length === 0 ? (
+              <p>No hay cortes cerrados todavía</p>
+            ) : (
+              cortes.map((corte) => (
+                <div key={corte.id} style={styles.cutBox}>
+                  <h3>Corte cerrado</h3>
+                  <p><strong>Fecha:</strong> {corte.fecha}</p>
+                  <p><strong>Venta bruta:</strong> ${corte.ventaBruta}</p>
+                  <p><strong>Gastos:</strong> ${corte.totalGastos}</p>
+                  <p><strong>Utilidad neta:</strong> ${corte.utilidadNeta}</p>
+
+                  <button
+                    style={styles.deleteButton}
+                    onClick={() => eliminarCorte(corte.id)}
+                  >
+                    Borrar corte
+                  </button>
+                </div>
+              ))
             )}
           </>
         )}
@@ -723,6 +811,10 @@ const styles = {
   sectionTitle: {
     marginTop: 0,
     marginBottom: "16px",
+  },
+  note: {
+    color: "#555",
+    marginBottom: "14px",
   },
   card: {
     backgroundColor: "#fff",
@@ -784,6 +876,15 @@ const styles = {
   },
   redButton: {
     backgroundColor: "#b71c1c",
+    color: "white",
+    border: "none",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  blackButton: {
+    backgroundColor: "#111827",
     color: "white",
     border: "none",
     padding: "12px 16px",
@@ -858,5 +959,12 @@ const styles = {
     borderBottom: "1px solid #eee",
     fontSize: "14px",
     verticalAlign: "top",
+  },
+  cutBox: {
+    border: "1px solid #ddd",
+    borderRadius: "10px",
+    padding: "14px",
+    marginBottom: "12px",
+    backgroundColor: "#fafafa",
   },
 };
