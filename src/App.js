@@ -8,9 +8,6 @@ export default function App() {
 
   const [nuevoCliente, setNuevoCliente] = useState({
     nombre: "",
-    telefono: "",
-    direccion: "",
-    zona: "",
   });
 
   const [nuevaVenta, setNuevaVenta] = useState({
@@ -67,13 +64,8 @@ export default function App() {
   }, [clientes]);
 
   const agregarCliente = () => {
-    if (
-      nuevoCliente.nombre.trim() === "" ||
-      nuevoCliente.telefono.trim() === "" ||
-      nuevoCliente.direccion.trim() === "" ||
-      nuevoCliente.zona.trim() === ""
-    ) {
-      alert("Completa todos los datos del cliente");
+    if (nuevoCliente.nombre.trim() === "") {
+      alert("Escribe el nombre del cliente");
       return;
     }
 
@@ -81,15 +73,12 @@ export default function App() {
       ...clientes,
       {
         id: Date.now(),
-        ...nuevoCliente,
+        nombre: nuevoCliente.nombre.trim(),
       },
     ]);
 
     setNuevoCliente({
       nombre: "",
-      telefono: "",
-      direccion: "",
-      zona: "",
     });
   };
 
@@ -250,14 +239,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={styles.cutCard}>
-          <div>
-            <h2 style={styles.sectionTitle}>📅 Cerrar corte semanal</h2>
-            <p style={styles.note}>
-              Al cerrar el corte, las ventas y gastos actuales se guardan en historial
-              y la semana nueva empieza desde cero.
-            </p>
-          </div>
+        <div style={styles.cutCardSimple}>
           <button style={styles.orangeButton} onClick={cerrarCorteSemanal}>
             Cerrar corte semanal
           </button>
@@ -275,33 +257,6 @@ export default function App() {
               value={nuevoCliente.nombre}
               onChange={(e) =>
                 setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Teléfono"
-              value={nuevoCliente.telefono}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Dirección"
-              value={nuevoCliente.direccion}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Zona"
-              value={nuevoCliente.zona}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, zona: e.target.value })
               }
             />
 
@@ -437,9 +392,6 @@ export default function App() {
                     <thead>
                       <tr>
                         <th style={styles.th}>Nombre</th>
-                        <th style={styles.th}>Teléfono</th>
-                        <th style={styles.th}>Dirección</th>
-                        <th style={styles.th}>Zona</th>
                         <th style={styles.th}>Acción</th>
                       </tr>
                     </thead>
@@ -447,9 +399,6 @@ export default function App() {
                       {clientesFiltrados.map((cliente) => (
                         <tr key={cliente.id}>
                           <td style={styles.td}>{cliente.nombre}</td>
-                          <td style={styles.td}>{cliente.telefono}</td>
-                          <td style={styles.td}>{cliente.direccion}</td>
-                          <td style={styles.td}>{cliente.zona}</td>
                           <td style={styles.td}>
                             <button
                               style={styles.deleteButton}
@@ -743,13 +692,12 @@ const styles = {
     fontWeight: "bold",
     color: "#4f46e5",
   },
-  cutCard: {
+  cutCardSimple: {
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    gap: "18px",
     backgroundColor: "rgba(255,255,255,0.86)",
-    padding: "24px",
+    padding: "22px",
     marginBottom: "24px",
     borderRadius: "22px",
     boxShadow: "0 8px 24px rgba(120, 80, 20, 0.10)",
@@ -772,15 +720,18 @@ const styles = {
     backdropFilter: "blur(6px)",
   },
   clientCard: {
-    background: "linear-gradient(135deg, rgba(240,253,244,0.92), rgba(255,255,255,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(240,253,244,0.92), rgba(255,255,255,0.92))",
     border: "1px solid #bbf7d0",
   },
   saleCard: {
-    background: "linear-gradient(135deg, rgba(239,246,255,0.92), rgba(255,255,255,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(239,246,255,0.92), rgba(255,255,255,0.92))",
     border: "1px solid #bfdbfe",
   },
   expenseCard: {
-    background: "linear-gradient(135deg, rgba(255,241,242,0.92), rgba(255,255,255,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(255,241,242,0.92), rgba(255,255,255,0.92))",
     border: "1px solid #fecdd3",
   },
   sectionTitle: {
@@ -788,11 +739,6 @@ const styles = {
     marginBottom: "16px",
     color: "#3b240c",
     fontSize: "24px",
-  },
-  note: {
-    color: "#555",
-    marginBottom: "0",
-    lineHeight: "1.5",
   },
   input: {
     display: "block",
@@ -845,12 +791,13 @@ const styles = {
     background: "linear-gradient(135deg, #f59e0b, #d97706)",
     color: "white",
     border: "none",
-    padding: "14px 18px",
+    padding: "14px 24px",
     borderRadius: "11px",
     cursor: "pointer",
     fontWeight: "bold",
     boxShadow: "0 4px 10px rgba(245,158,11,0.30)",
     whiteSpace: "nowrap",
+    fontSize: "16px",
   },
   deleteButton: {
     backgroundColor: "#c62828",
