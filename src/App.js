@@ -1,52 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 
 export default function App() {
-  const [clientes, setClientes] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [gastos, setGastos] = useState([]);
-  const [cortes, setCortes] = useState([]);
-
-  const [nuevoCliente, setNuevoCliente] = useState({
-    nombre: "",
-    telefono: "",
-    direccion: "",
-    zona: "",
-  });
 
   const [nuevaVenta, setNuevaVenta] = useState({
-    cliente: "",
     total: "",
     metodo: "Efectivo",
   });
 
   const [nuevoGasto, setNuevoGasto] = useState({
-    concepto: "Alimento",
+    concepto: "",
     monto: "",
     metodo: "Efectivo",
   });
 
-  const [mostrarClientes, setMostrarClientes] = useState(false);
   const [mostrarVentas, setMostrarVentas] = useState(false);
   const [mostrarGastos, setMostrarGastos] = useState(false);
-  const [mostrarCortes, setMostrarCortes] = useState(false);
-
-  const [buscarCliente, setBuscarCliente] = useState("");
 
   useEffect(() => {
-    const clientesGuardados = localStorage.getItem("clientes");
     const ventasGuardadas = localStorage.getItem("ventas");
     const gastosGuardados = localStorage.getItem("gastos");
-    const cortesGuardados = localStorage.getItem("cortes");
 
-    if (clientesGuardados) setClientes(JSON.parse(clientesGuardados));
     if (ventasGuardadas) setVentas(JSON.parse(ventasGuardadas));
     if (gastosGuardados) setGastos(JSON.parse(gastosGuardados));
-    if (cortesGuardados) setCortes(JSON.parse(cortesGuardados));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem("clientes", JSON.stringify(clientes));
-  }, [clientes]);
 
   useEffect(() => {
     localStorage.setItem("ventas", JSON.stringify(ventas));
@@ -56,49 +34,9 @@ export default function App() {
     localStorage.setItem("gastos", JSON.stringify(gastos));
   }, [gastos]);
 
-  useEffect(() => {
-    localStorage.setItem("cortes", JSON.stringify(cortes));
-  }, [cortes]);
-
-  const clientesOrdenados = useMemo(() => {
-    return [...clientes].sort((a, b) =>
-      a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" })
-    );
-  }, [clientes]);
-
-  const agregarCliente = () => {
-    if (
-      nuevoCliente.nombre.trim() === "" ||
-      nuevoCliente.telefono.trim() === "" ||
-      nuevoCliente.direccion.trim() === "" ||
-      nuevoCliente.zona.trim() === ""
-    ) {
-      alert("Completa todos los datos del cliente");
-      return;
-    }
-
-    setClientes([
-      ...clientes,
-      {
-        id: Date.now(),
-        ...nuevoCliente,
-      },
-    ]);
-
-    setNuevoCliente({
-      nombre: "",
-      telefono: "",
-      direccion: "",
-      zona: "",
-    });
-  };
-
   const guardarVenta = () => {
-    if (
-      nuevaVenta.cliente.trim() === "" ||
-      nuevaVenta.total.toString().trim() === ""
-    ) {
-      alert("Completa cliente y total de la venta");
+    if (nuevaVenta.total.toString().trim() === "") {
+      alert("Escribe el total de la venta");
       return;
     }
 
@@ -106,7 +44,6 @@ export default function App() {
       ...ventas,
       {
         id: Date.now(),
-        cliente: nuevaVenta.cliente,
         total: Number(nuevaVenta.total),
         metodo: nuevaVenta.metodo,
         fecha: new Date().toLocaleString(),
@@ -114,7 +51,6 @@ export default function App() {
     ]);
 
     setNuevaVenta({
-      cliente: "",
       total: "",
       metodo: "Efectivo",
     });
@@ -125,7 +61,7 @@ export default function App() {
       nuevoGasto.concepto.trim() === "" ||
       nuevoGasto.monto.toString().trim() === ""
     ) {
-      alert("Completa concepto y monto del gasto");
+      alert("Escribe el nombre del gasto y el monto");
       return;
     }
 
@@ -133,7 +69,7 @@ export default function App() {
       ...gastos,
       {
         id: Date.now(),
-        concepto: nuevoGasto.concepto,
+        concepto: nuevoGasto.concepto.trim(),
         monto: Number(nuevoGasto.monto),
         metodo: nuevoGasto.metodo,
         fecha: new Date().toLocaleString(),
@@ -141,15 +77,10 @@ export default function App() {
     ]);
 
     setNuevoGasto({
-      concepto: "Alimento",
+      concepto: "",
       monto: "",
       metodo: "Efectivo",
     });
-  };
-
-  const eliminarCliente = (id) => {
-    if (!window.confirm("¿Seguro que deseas borrar este cliente?")) return;
-    setClientes(clientes.filter((cliente) => cliente.id !== id));
   };
 
   const eliminarVenta = (id) => {
@@ -160,11 +91,6 @@ export default function App() {
   const eliminarGasto = (id) => {
     if (!window.confirm("¿Seguro que deseas borrar este gasto?")) return;
     setGastos(gastos.filter((gasto) => gasto.id !== id));
-  };
-
-  const eliminarCorte = (id) => {
-    if (!window.confirm("¿Seguro que deseas borrar este corte histórico?")) return;
-    setCortes(cortes.filter((corte) => corte.id !== id));
   };
 
   const ventaBruta = useMemo(() => {
@@ -179,39 +105,6 @@ export default function App() {
     return ventaBruta - totalGastos;
   }, [ventaBruta, totalGastos]);
 
-  const cerrarCorteSemanal = () => {
-    if (ventas.length === 0 && gastos.length === 0) {
-      alert("No hay ventas ni gastos para cerrar corte");
-      return;
-    }
-
-    const confirmar = window.confirm(
-      "¿Cerrar corte semanal? Las ventas y gastos actuales se irán al historial y la semana nueva empezará desde cero."
-    );
-
-    if (!confirmar) return;
-
-    const nuevoCorte = {
-      id: Date.now(),
-      fecha: new Date().toLocaleString(),
-      ventas,
-      gastos,
-      ventaBruta,
-      totalGastos,
-      utilidadNeta,
-    };
-
-    setCortes([nuevoCorte, ...cortes]);
-    setVentas([]);
-    setGastos([]);
-  };
-
-  const clientesFiltrados = useMemo(() => {
-    return clientesOrdenados.filter((cliente) =>
-      cliente.nombre.toLowerCase().includes(buscarCliente.toLowerCase())
-    );
-  }, [clientesOrdenados, buscarCliente]);
-
   return (
     <div style={styles.page}>
       <div style={styles.container}>
@@ -219,7 +112,7 @@ export default function App() {
           <div style={styles.farmLeft}>🌾</div>
           <div>
             <h1 style={styles.title}>🐔 Granja La Lomita</h1>
-            <p style={styles.subtitle}>Sistema semanal de clientes, ventas y gastos</p>
+            <p style={styles.subtitle}>Sistema simple de ventas y gastos</p>
           </div>
           <div style={styles.farmRight}>🌿</div>
         </div>
@@ -228,7 +121,7 @@ export default function App() {
           <div style={{ ...styles.summaryCard, ...styles.summaryVenta }}>
             <div style={styles.summaryIcon}>🛒</div>
             <div>
-              <div style={styles.summaryLabelVenta}>Venta bruta semana actual</div>
+              <div style={styles.summaryLabelVenta}>Venta bruta</div>
               <div style={styles.summaryValueVenta}>${ventaBruta}</div>
             </div>
           </div>
@@ -236,7 +129,7 @@ export default function App() {
           <div style={{ ...styles.summaryCard, ...styles.summaryGasto }}>
             <div style={styles.summaryIcon}>👛</div>
             <div>
-              <div style={styles.summaryLabelGasto}>Gastos semana actual</div>
+              <div style={styles.summaryLabelGasto}>Gastos</div>
               <div style={styles.summaryValueGasto}>${totalGastos}</div>
             </div>
           </div>
@@ -244,91 +137,17 @@ export default function App() {
           <div style={{ ...styles.summaryCard, ...styles.summaryUtilidad }}>
             <div style={styles.summaryIcon}>📈</div>
             <div>
-              <div style={styles.summaryLabelUtilidad}>Utilidad neta semana actual</div>
+              <div style={styles.summaryLabelUtilidad}>Utilidad neta</div>
               <div style={styles.summaryValueUtilidad}>${utilidadNeta}</div>
             </div>
           </div>
         </div>
 
-        <div style={styles.cutCard}>
-          <div>
-            <h2 style={styles.sectionTitle}>📅 Cerrar corte semanal</h2>
-            <p style={styles.note}>
-              Al cerrar el corte, las ventas y gastos actuales se guardan en historial
-              y la semana nueva empieza desde cero.
-            </p>
-          </div>
-          <button style={styles.orangeButton} onClick={cerrarCorteSemanal}>
-            Cerrar corte semanal
-          </button>
-        </div>
-
         <div style={styles.formGrid}>
-          <div style={{ ...styles.card, ...styles.clientCard }}>
-            <h2 style={{ ...styles.sectionTitle, color: "#15803d" }}>
-              👥 Agregar cliente
-            </h2>
-
-            <input
-              style={styles.input}
-              placeholder="Nombre"
-              value={nuevoCliente.nombre}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Teléfono"
-              value={nuevoCliente.telefono}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, telefono: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Dirección"
-              value={nuevoCliente.direccion}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, direccion: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              placeholder="Zona"
-              value={nuevoCliente.zona}
-              onChange={(e) =>
-                setNuevoCliente({ ...nuevoCliente, zona: e.target.value })
-              }
-            />
-
-            <button style={styles.greenButton} onClick={agregarCliente}>
-              Guardar cliente
-            </button>
-          </div>
-
           <div style={{ ...styles.card, ...styles.saleCard }}>
             <h2 style={{ ...styles.sectionTitle, color: "#0f52ba" }}>
               🛍️ Registrar venta
             </h2>
-
-            <select
-              style={styles.input}
-              value={nuevaVenta.cliente}
-              onChange={(e) =>
-                setNuevaVenta({ ...nuevaVenta, cliente: e.target.value })
-              }
-            >
-              <option value="">Selecciona un cliente</option>
-              {clientesOrdenados.map((cliente) => (
-                <option key={cliente.id} value={cliente.nombre}>
-                  {cliente.nombre}
-                </option>
-              ))}
-            </select>
 
             <input
               style={styles.input}
@@ -361,28 +180,32 @@ export default function App() {
               👛 Registrar gasto
             </h2>
 
-            <select
+            <input
               style={styles.input}
+              list="conceptos-gastos"
+              placeholder="Nombre del gasto"
               value={nuevoGasto.concepto}
               onChange={(e) =>
                 setNuevoGasto({ ...nuevoGasto, concepto: e.target.value })
               }
-            >
-              <option value="Alimento">Alimento</option>
-              <option value="Gasolina">Gasolina</option>
-              <option value="Nono">Nono</option>
-              <option value="Mamá">Mamá</option>
-              <option value="Papá">Papá</option>
-              <option value="Tío Mario">Tío Mario</option>
-              <option value="Etiquetas">Etiquetas</option>
-              <option value="Verduras">Verduras</option>
-              <option value="Vitafort">Vitafort</option>
-              <option value="Doceneras">Doceneras</option>
-              <option value="Paca de trigo">Paca de trigo</option>
-              <option value="Pastillas para perros">Pastillas para perros</option>
-              <option value="Propina">Propina</option>
-              <option value="Otro">Otro</option>
-            </select>
+            />
+
+            <datalist id="conceptos-gastos">
+              <option value="Alimento" />
+              <option value="Gasolina" />
+              <option value="Nono" />
+              <option value="Mamá" />
+              <option value="Papá" />
+              <option value="Tío Mario" />
+              <option value="Etiquetas" />
+              <option value="Verduras" />
+              <option value="Vitafort" />
+              <option value="Doceneras" />
+              <option value="Paca de trigo" />
+              <option value="Pastillas para perros" />
+              <option value="Propina" />
+              <option value="Otro" />
+            </datalist>
 
             <input
               style={styles.input}
@@ -413,74 +236,17 @@ export default function App() {
 
         <div style={styles.card}>
           <button
-            style={{ ...styles.folderButton, ...styles.folderGreen }}
-            onClick={() => setMostrarClientes(!mostrarClientes)}
-          >
-            <span>👥 📁 Clientes registrados</span>
-            <span>{mostrarClientes ? "▲" : "▼"}</span>
-          </button>
-
-          {mostrarClientes && (
-            <>
-              <input
-                style={styles.input}
-                placeholder="Buscar cliente por nombre..."
-                value={buscarCliente}
-                onChange={(e) => setBuscarCliente(e.target.value)}
-              />
-
-              {clientesFiltrados.length === 0 ? (
-                <p>No hay clientes para mostrar</p>
-              ) : (
-                <div style={styles.tableWrapper}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.th}>Nombre</th>
-                        <th style={styles.th}>Teléfono</th>
-                        <th style={styles.th}>Dirección</th>
-                        <th style={styles.th}>Zona</th>
-                        <th style={styles.th}>Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clientesFiltrados.map((cliente) => (
-                        <tr key={cliente.id}>
-                          <td style={styles.td}>{cliente.nombre}</td>
-                          <td style={styles.td}>{cliente.telefono}</td>
-                          <td style={styles.td}>{cliente.direccion}</td>
-                          <td style={styles.td}>{cliente.zona}</td>
-                          <td style={styles.td}>
-                            <button
-                              style={styles.deleteButton}
-                              onClick={() => eliminarCliente(cliente.id)}
-                            >
-                              Borrar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div style={styles.card}>
-          <button
             style={{ ...styles.folderButton, ...styles.folderBlue }}
             onClick={() => setMostrarVentas(!mostrarVentas)}
           >
-            <span>🛒 📁 Ventas semana actual</span>
+            <span>🛒 📁 Ventas registradas</span>
             <span>{mostrarVentas ? "▲" : "▼"}</span>
           </button>
 
           {mostrarVentas && (
             <>
               <div style={styles.totalBox}>
-                <strong>Venta bruta semana actual:</strong> ${ventaBruta}
+                <strong>Venta bruta:</strong> ${ventaBruta}
               </div>
 
               {ventas.length === 0 ? (
@@ -490,7 +256,6 @@ export default function App() {
                   <table style={styles.table}>
                     <thead>
                       <tr>
-                        <th style={styles.th}>Cliente</th>
                         <th style={styles.th}>Total</th>
                         <th style={styles.th}>Método</th>
                         <th style={styles.th}>Fecha</th>
@@ -500,7 +265,6 @@ export default function App() {
                     <tbody>
                       {ventas.map((venta) => (
                         <tr key={venta.id}>
-                          <td style={styles.td}>{venta.cliente}</td>
                           <td style={styles.td}>${venta.total}</td>
                           <td style={styles.td}>{venta.metodo}</td>
                           <td style={styles.td}>{venta.fecha}</td>
@@ -527,14 +291,14 @@ export default function App() {
             style={{ ...styles.folderButton, ...styles.folderRed }}
             onClick={() => setMostrarGastos(!mostrarGastos)}
           >
-            <span>👛 📁 Gastos semana actual</span>
+            <span>👛 📁 Gastos registrados</span>
             <span>{mostrarGastos ? "▲" : "▼"}</span>
           </button>
 
           {mostrarGastos && (
             <>
               <div style={styles.totalBoxRed}>
-                <strong>Gastos semana actual:</strong> ${totalGastos}
+                <strong>Gastos:</strong> ${totalGastos}
               </div>
 
               {gastos.length === 0 ? (
@@ -571,49 +335,6 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div style={styles.card}>
-          <button
-            style={{ ...styles.folderButton, ...styles.folderPurple }}
-            onClick={() => setMostrarCortes(!mostrarCortes)}
-          >
-            <span>📋 📁 Historial de cortes anteriores</span>
-            <span>{mostrarCortes ? "▲" : "▼"}</span>
-          </button>
-
-          {mostrarCortes && (
-            <>
-              {cortes.length === 0 ? (
-                <p>No hay cortes cerrados todavía</p>
-              ) : (
-                cortes.map((corte) => (
-                  <div key={corte.id} style={styles.cutBox}>
-                    <h3>Corte cerrado</h3>
-                    <p>
-                      <strong>Fecha:</strong> {corte.fecha}
-                    </p>
-                    <p>
-                      <strong>Venta bruta:</strong> ${corte.ventaBruta}
-                    </p>
-                    <p>
-                      <strong>Gastos:</strong> ${corte.totalGastos}
-                    </p>
-                    <p>
-                      <strong>Utilidad neta:</strong> ${corte.utilidadNeta}
-                    </p>
-
-                    <button
-                      style={styles.deleteButton}
-                      onClick={() => eliminarCorte(corte.id)}
-                    >
-                      Borrar corte
-                    </button>
-                  </div>
-                ))
               )}
             </>
           )}
@@ -743,19 +464,6 @@ const styles = {
     fontWeight: "bold",
     color: "#4f46e5",
   },
-  cutCard: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "18px",
-    backgroundColor: "rgba(255,255,255,0.86)",
-    padding: "24px",
-    marginBottom: "24px",
-    borderRadius: "22px",
-    boxShadow: "0 8px 24px rgba(120, 80, 20, 0.10)",
-    border: "1px solid rgba(245, 158, 11, 0.35)",
-    backdropFilter: "blur(6px)",
-  },
   formGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -771,16 +479,14 @@ const styles = {
     border: "1px solid rgba(255, 210, 130, 0.42)",
     backdropFilter: "blur(6px)",
   },
-  clientCard: {
-    background: "linear-gradient(135deg, rgba(240,253,244,0.92), rgba(255,255,255,0.92))",
-    border: "1px solid #bbf7d0",
-  },
   saleCard: {
-    background: "linear-gradient(135deg, rgba(239,246,255,0.92), rgba(255,255,255,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(239,246,255,0.92), rgba(255,255,255,0.92))",
     border: "1px solid #bfdbfe",
   },
   expenseCard: {
-    background: "linear-gradient(135deg, rgba(255,241,242,0.92), rgba(255,255,255,0.92))",
+    background:
+      "linear-gradient(135deg, rgba(255,241,242,0.92), rgba(255,255,255,0.92))",
     border: "1px solid #fecdd3",
   },
   sectionTitle: {
@@ -788,11 +494,6 @@ const styles = {
     marginBottom: "16px",
     color: "#3b240c",
     fontSize: "24px",
-  },
-  note: {
-    color: "#555",
-    marginBottom: "0",
-    lineHeight: "1.5",
   },
   input: {
     display: "block",
@@ -804,18 +505,6 @@ const styles = {
     boxSizing: "border-box",
     fontSize: "15px",
     backgroundColor: "#fffefa",
-  },
-  greenButton: {
-    width: "100%",
-    background: "linear-gradient(135deg, #22c55e, #15803d)",
-    color: "white",
-    border: "none",
-    padding: "14px 18px",
-    borderRadius: "11px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    boxShadow: "0 4px 10px rgba(34,197,94,0.25)",
-    fontSize: "15px",
   },
   blueButton: {
     width: "100%",
@@ -841,17 +530,6 @@ const styles = {
     boxShadow: "0 4px 10px rgba(244,63,94,0.25)",
     fontSize: "15px",
   },
-  orangeButton: {
-    background: "linear-gradient(135deg, #f59e0b, #d97706)",
-    color: "white",
-    border: "none",
-    padding: "14px 18px",
-    borderRadius: "11px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    boxShadow: "0 4px 10px rgba(245,158,11,0.30)",
-    whiteSpace: "nowrap",
-  },
   deleteButton: {
     backgroundColor: "#c62828",
     color: "white",
@@ -873,11 +551,6 @@ const styles = {
     fontSize: "18px",
     marginBottom: "12px",
   },
-  folderGreen: {
-    background: "linear-gradient(135deg, #f0fdf4, #ffffff)",
-    border: "1px solid #bbf7d0",
-    color: "#15803d",
-  },
   folderBlue: {
     background: "linear-gradient(135deg, #eff6ff, #ffffff)",
     border: "1px solid #bfdbfe",
@@ -887,11 +560,6 @@ const styles = {
     background: "linear-gradient(135deg, #fff1f2, #ffffff)",
     border: "1px solid #fecdd3",
     color: "#be123c",
-  },
-  folderPurple: {
-    background: "linear-gradient(135deg, #f5f3ff, #ffffff)",
-    border: "1px solid #ddd6fe",
-    color: "#4f46e5",
   },
   totalBox: {
     backgroundColor: "#e8f5e9",
@@ -931,12 +599,5 @@ const styles = {
     borderBottom: "1px solid #eee",
     fontSize: "14px",
     verticalAlign: "top",
-  },
-  cutBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "16px",
-    marginBottom: "12px",
-    backgroundColor: "#fffefa",
   },
 };
