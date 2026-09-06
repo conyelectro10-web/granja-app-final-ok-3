@@ -27,10 +27,6 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
-
   const cargarDatos = async () => {
     setCargando(true);
 
@@ -65,13 +61,18 @@ export default function App() {
       setCortes(cortesData || []);
     } catch (error) {
       console.error("Error cargando datos:", error);
+
       alert(
-        "No se pudieron cargar los datos. Revisa tu conexión a internet e inténtalo nuevamente."
+        "No se pudieron cargar los datos. Revisa tu conexión a internet."
       );
     } finally {
       setCargando(false);
     }
   };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
 
   const guardarVenta = async () => {
     const total = Number(nuevaVenta.total);
@@ -108,7 +109,8 @@ export default function App() {
       });
     } catch (error) {
       console.error("Error guardando venta:", error);
-      alert("No se pudo guardar la venta. Inténtalo nuevamente.");
+
+      alert("No se pudo guardar la venta.");
     } finally {
       setGuardando(false);
     }
@@ -124,7 +126,7 @@ export default function App() {
       Number.isNaN(monto) ||
       monto <= 0
     ) {
-      alert("Escribe el concepto y un monto válido");
+      alert("Escribe el nombre del gasto y un monto válido");
       return;
     }
 
@@ -153,7 +155,8 @@ export default function App() {
       });
     } catch (error) {
       console.error("Error guardando gasto:", error);
-      alert("No se pudo guardar el gasto. Inténtalo nuevamente.");
+
+      alert("No se pudo guardar el gasto.");
     } finally {
       setGuardando(false);
     }
@@ -179,6 +182,7 @@ export default function App() {
       );
     } catch (error) {
       console.error("Error borrando venta:", error);
+
       alert("No se pudo borrar la venta.");
     }
   };
@@ -203,6 +207,7 @@ export default function App() {
       );
     } catch (error) {
       console.error("Error borrando gasto:", error);
+
       alert("No se pudo borrar el gasto.");
     }
   };
@@ -227,6 +232,7 @@ export default function App() {
       );
     } catch (error) {
       console.error("Error borrando corte:", error);
+
       alert("No se pudo borrar el corte.");
     }
   };
@@ -263,12 +269,48 @@ export default function App() {
 
     setGuardando(true);
 
-    try {
-      const { error } = await supabase.rpc(
-        "cerrar_corte_semanal"
-      );
+    let corteGuardado = null;
 
-      if (error) throw error;
+    try {
+      const { data, error: corteError } = await supabase
+        .from("cortes")
+        .insert([
+          {
+            ventas,
+            gastos,
+            venta_bruta: ventaBruta,
+            total_gastos: totalGastos,
+            utilidad_neta: utilidadNeta,
+          },
+        ])
+        .select()
+        .single();
+
+      if (corteError) throw corteError;
+
+      corteGuardado = data;
+
+      if (ventas.length > 0) {
+        const idsVentas = ventas.map((venta) => venta.id);
+
+        const { error: ventasError } = await supabase
+          .from("ventas")
+          .delete()
+          .in("id", idsVentas);
+
+        if (ventasError) throw ventasError;
+      }
+
+      if (gastos.length > 0) {
+        const idsGastos = gastos.map((gasto) => gasto.id);
+
+        const { error: gastosError } = await supabase
+          .from("gastos")
+          .delete()
+          .in("id", idsGastos);
+
+        if (gastosError) throw gastosError;
+      }
 
       await cargarDatos();
 
@@ -277,8 +319,18 @@ export default function App() {
       );
     } catch (error) {
       console.error("Error cerrando corte:", error);
+
+      if (corteGuardado && corteGuardado.id) {
+        await supabase
+          .from("cortes")
+          .delete()
+          .eq("id", corteGuardado.id);
+      }
+
+      await cargarDatos();
+
       alert(
-        "No se pudo cerrar el corte. Los datos actuales no fueron eliminados."
+        "No se pudo completar el cierre del corte. Los datos fueron recargados para evitar errores."
       );
     } finally {
       setGuardando(false);
@@ -306,13 +358,27 @@ export default function App() {
     return (
       <div style={styles.loadingPage}>
         <div style={styles.loadingBox}>
-          <div style={{ fontSize: "50px", marginBottom: "15px" }}>
+          <div
+            style={{
+              fontSize: "50px",
+              marginBottom: "15px",
+            }}
+          >
             🐔
           </div>
-          <h2 style={{ margin: 0, color: "#4a2606" }}>
+
+          <h2
+            style={{
+              margin: 0,
+              color: "#4a2606",
+            }}
+          >
             Granja La Lomita
           </h2>
-          <p style={{ color: "#666" }}>Cargando información...</p>
+
+          <p style={{ color: "#666" }}>
+            Cargando información...
+          </p>
         </div>
       </div>
     );
@@ -325,7 +391,9 @@ export default function App() {
           <div style={styles.farmLeft}>🌾</div>
 
           <div>
-            <h1 style={styles.title}>🐔 Granja La Lomita</h1>
+            <h1 style={styles.title}>
+              🐔 Granja La Lomita
+            </h1>
 
             <p style={styles.subtitle}>
               Control semanal de ventas y gastos
@@ -342,7 +410,9 @@ export default function App() {
               ...styles.summaryVenta,
             }}
           >
-            <div style={styles.summaryIcon}>🛒</div>
+            <div style={styles.summaryIcon}>
+              🛒
+            </div>
 
             <div>
               <div style={styles.summaryLabelVenta}>
@@ -361,7 +431,9 @@ export default function App() {
               ...styles.summaryGasto,
             }}
           >
-            <div style={styles.summaryIcon}>👛</div>
+            <div style={styles.summaryIcon}>
+              👛
+            </div>
 
             <div>
               <div style={styles.summaryLabelGasto}>
@@ -380,7 +452,9 @@ export default function App() {
               ...styles.summaryUtilidad,
             }}
           >
-            <div style={styles.summaryIcon}>📈</div>
+            <div style={styles.summaryIcon}>
+              📈
+            </div>
 
             <div>
               <div style={styles.summaryLabelUtilidad}>
@@ -423,7 +497,9 @@ export default function App() {
                 })
               }
               onKeyDown={(e) => {
-                if (e.key === "Enter") guardarVenta();
+                if (e.key === "Enter") {
+                  guardarVenta();
+                }
               }}
             />
 
@@ -432,7 +508,9 @@ export default function App() {
               onClick={guardarVenta}
               disabled={guardando}
             >
-              {guardando ? "Guardando..." : "Guardar venta"}
+              {guardando
+                ? "Guardando..."
+                : "Guardar venta"}
             </button>
           </div>
 
@@ -494,7 +572,9 @@ export default function App() {
                 })
               }
               onKeyDown={(e) => {
-                if (e.key === "Enter") guardarGasto();
+                if (e.key === "Enter") {
+                  guardarGasto();
+                }
               }}
             />
 
@@ -503,7 +583,9 @@ export default function App() {
               onClick={guardarGasto}
               disabled={guardando}
             >
-              {guardando ? "Guardando..." : "Guardar gasto"}
+              {guardando
+                ? "Guardando..."
+                : "Guardar gasto"}
             </button>
           </div>
         </div>
@@ -543,7 +625,9 @@ export default function App() {
               🛒 📁 Ventas semana actual ({ventas.length})
             </span>
 
-            <span>{mostrarVentas ? "▲" : "▼"}</span>
+            <span>
+              {mostrarVentas ? "▲" : "▼"}
+            </span>
           </button>
 
           {mostrarVentas && (
@@ -560,9 +644,17 @@ export default function App() {
                   <table style={styles.table}>
                     <thead>
                       <tr>
-                        <th style={styles.th}>Monto</th>
-                        <th style={styles.th}>Fecha</th>
-                        <th style={styles.th}>Acción</th>
+                        <th style={styles.th}>
+                          Monto
+                        </th>
+
+                        <th style={styles.th}>
+                          Fecha
+                        </th>
+
+                        <th style={styles.th}>
+                          Acción
+                        </th>
                       </tr>
                     </thead>
 
@@ -576,14 +668,20 @@ export default function App() {
                           </td>
 
                           <td style={styles.td}>
-                            {fecha(venta.created_at)}
+                            {fecha(
+                              venta.created_at
+                            )}
                           </td>
 
                           <td style={styles.td}>
                             <button
-                              style={styles.deleteButton}
+                              style={
+                                styles.deleteButton
+                              }
                               onClick={() =>
-                                eliminarVenta(venta.id)
+                                eliminarVenta(
+                                  venta.id
+                                )
                               }
                             >
                               Borrar
@@ -613,7 +711,9 @@ export default function App() {
               👛 📁 Gastos semana actual ({gastos.length})
             </span>
 
-            <span>{mostrarGastos ? "▲" : "▼"}</span>
+            <span>
+              {mostrarGastos ? "▲" : "▼"}
+            </span>
           </button>
 
           {mostrarGastos && (
@@ -630,10 +730,21 @@ export default function App() {
                   <table style={styles.table}>
                     <thead>
                       <tr>
-                        <th style={styles.th}>Concepto</th>
-                        <th style={styles.th}>Monto</th>
-                        <th style={styles.th}>Fecha</th>
-                        <th style={styles.th}>Acción</th>
+                        <th style={styles.th}>
+                          Concepto
+                        </th>
+
+                        <th style={styles.th}>
+                          Monto
+                        </th>
+
+                        <th style={styles.th}>
+                          Fecha
+                        </th>
+
+                        <th style={styles.th}>
+                          Acción
+                        </th>
                       </tr>
                     </thead>
 
@@ -646,19 +757,27 @@ export default function App() {
 
                           <td style={styles.td}>
                             <strong>
-                              {dinero(gasto.monto)}
+                              {dinero(
+                                gasto.monto
+                              )}
                             </strong>
                           </td>
 
                           <td style={styles.td}>
-                            {fecha(gasto.created_at)}
+                            {fecha(
+                              gasto.created_at
+                            )}
                           </td>
 
                           <td style={styles.td}>
                             <button
-                              style={styles.deleteButton}
+                              style={
+                                styles.deleteButton
+                              }
                               onClick={() =>
-                                eliminarGasto(gasto.id)
+                                eliminarGasto(
+                                  gasto.id
+                                )
                               }
                             >
                               Borrar
@@ -688,13 +807,17 @@ export default function App() {
               📋 📁 Historial de cortes ({cortes.length})
             </span>
 
-            <span>{mostrarCortes ? "▲" : "▼"}</span>
+            <span>
+              {mostrarCortes ? "▲" : "▼"}
+            </span>
           </button>
 
           {mostrarCortes && (
             <>
               {cortes.length === 0 ? (
-                <p>No hay cortes cerrados todavía.</p>
+                <p>
+                  No hay cortes cerrados todavía.
+                </p>
               ) : (
                 cortes.map((corte) => (
                   <div
@@ -716,18 +839,26 @@ export default function App() {
                     </p>
 
                     <p>
-                      <strong>Venta bruta:</strong>{" "}
-                      {dinero(corte.venta_bruta)}
+                      <strong>
+                        Venta bruta:
+                      </strong>{" "}
+                      {dinero(
+                        corte.venta_bruta
+                      )}
                     </p>
 
                     <p>
                       <strong>Gastos:</strong>{" "}
-                      {dinero(corte.total_gastos)}
+                      {dinero(
+                        corte.total_gastos
+                      )}
                     </p>
 
                     <p>
                       <strong>Utilidad:</strong>{" "}
-                      {dinero(corte.utilidad_neta)}
+                      {dinero(
+                        corte.utilidad_neta
+                      )}
                     </p>
 
                     <button
@@ -772,7 +903,8 @@ const styles = {
     backgroundColor: "#ffffff",
     padding: "35px",
     borderRadius: "22px",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.10)",
+    boxShadow:
+      "0 10px 30px rgba(0,0,0,0.10)",
   },
 
   container: {
@@ -839,7 +971,8 @@ const styles = {
     gap: "18px",
     padding: "24px",
     borderRadius: "22px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.10)",
+    boxShadow:
+      "0 10px 25px rgba(0,0,0,0.10)",
   },
 
   summaryVenta: {
@@ -864,7 +997,8 @@ const styles = {
     width: "64px",
     height: "64px",
     borderRadius: "999px",
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor:
+      "rgba(255,255,255,0.8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -920,7 +1054,8 @@ const styles = {
   },
 
   card: {
-    backgroundColor: "rgba(255,255,255,0.90)",
+    backgroundColor:
+      "rgba(255,255,255,0.90)",
     padding: "22px",
     marginBottom: "18px",
     borderRadius: "20px",
@@ -947,7 +1082,8 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     gap: "18px",
-    backgroundColor: "rgba(255,255,255,0.90)",
+    backgroundColor:
+      "rgba(255,255,255,0.90)",
     padding: "24px",
     marginBottom: "24px",
     borderRadius: "22px",
@@ -1113,19 +1249,22 @@ const styles = {
     textAlign: "left",
     padding: "12px",
     backgroundColor: "#fef3c7",
-    borderBottom: "2px solid #facc15",
+    borderBottom:
+      "2px solid #facc15",
     fontSize: "14px",
   },
 
   td: {
     padding: "12px",
-    borderBottom: "1px solid #eee",
+    borderBottom:
+      "1px solid #eee",
     fontSize: "14px",
     verticalAlign: "middle",
   },
 
   cutBox: {
-    border: "1px solid #e5e7eb",
+    border:
+      "1px solid #e5e7eb",
     borderRadius: "14px",
     padding: "18px",
     marginBottom: "14px",
